@@ -1,0 +1,27 @@
+<!-- public/qr.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>QR Code Login</title>
+</head>
+<body>
+  <h1>Scan the QR Code to connect</h1>
+  <div id="qr-container">Loading...</div>
+
+  <script>
+    async function loadQR() {
+      const res = await fetch('/qr/generate');
+      const data = await res.json();
+      if (data.status === 'qr') {
+        const img = document.createElement('img');
+        img.src = data.qrImage;
+        document.getElementById('qr-container').innerHTML = '';
+        document.getElementById('qr-container').appendChild(img);
+      }
+    }
+
+    loadQR();
+  </script>
+</body>
+</html>
