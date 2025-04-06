@@ -1,0 +1,100 @@
+const express = require("express");
+const fs = require("fs-extra");
+const path = require("path");
+const {
+  makeWASocket,
+  useMultiFileAuthState,
+  DisconnectReason,
+  Browsers
+} = require("@whiskeysockets/baileys");
+const qrcode = require("qrcode");
+const megaUploader = require("../utils/megaUploader");
+const sendWhatsappMsg = require("../utils/sendWhatsappMsg");
+
+const router = express.Router();
+
+// Reset session folder if needed
+function resetSession(sessionPath) {
+  if (fs.existsSync(sessionPath)) {
+    fs.rmSync(sessionPath, { recursive: true, force: true });
+    console.log("⚠️ Old session reset");
+  }
+}
+
+router.get("/", async (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "public", "qr.html"));
+});
+
+router.get("/generate", async (req, res) => {
+  const sessionId = `session-${Date.now()}`;
+  const sessionPath = path.join(__dirname, "..", "sessions", sessionId);
+
+  resetSession(sessionPath);
+
+  const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+  const sock = makeWASocket({
+    auth: state,
+    printQRInTerminal: false,
+    browser: Browsers.ubuntu("Chrome"),
+  });
+
+  let qrSent = false;
+
+  sock.ev.on("connection.update", async (update) => {
+    const { connection, qr, lastDisconnect } = update;
+
+    if (qr && !qrSent) {
+      qrSent = true;
+      const qrImageData = await qrcode.toDataURL(qr);
+      console.log("📱 QR Code Generated");
+      return res.json({ status: "qr", qrImage: qrImageData });
+    }
+
+    if (connection === "open") {
+      console.log("✅ Connected via QR!");
+
+      try {
+        const sessionZipPath = `${sessionPath}.zip`;
+        await fs.ensureDir("sessions");
+        await fs.writeJson(`${sessionPath}/session.json`, state.creds);
+
+        const megaLink = await megaUploader(sessionPath, sessionZipPath);
+
+        setTimeout(async () => {
+          try {
+            await sendWhatsappMsg(sock, {
+              text: `✅ Session Created!\n🔐 Session ID: ${sessionId}\n📎 Download: ${megaLink}`,
+            });
+
+            console.log("✅ Session sent to WhatsApp and logging out...");
+            await sock.logout(); // ensures WhatsApp logs out properly
+          } catch (err) {
+            console.error("❌ Failed to send or logout:", err);
+          }
+        }, 4000); // 4 seconds delay
+      } catch (err) {
+        console.error("❌ Error after login:", err);
+      }
+    }
+
+    if (connection === "close") {
+      const reason = lastDisconnect?.error?.output?.statusCode;
+      const isRestartable = reason !== DisconnectReason.loggedOut;
+
+      console.warn("⚠️ Connection closed. Reason:", reason);
+
+      if (reason === 515) {
+        console.error("❌ Stream error 515: WhatsApp rejected the connection after pairing.");
+      }
+
+      if (isRestartable) {
+        console.log("🔁 Retrying connection...");
+        // Add optional reconnection logic here
+      }
+    }
+  });
+
+  sock.ev.on("creds.update", saveCreds);
+});
+
+module.exports = router;
