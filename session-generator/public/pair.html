@@ -1,0 +1,250 @@
+<!-- public/pair.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pair Code Login</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Boldonse&display=swap');
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #4e9f3d, #34d7b7, #55c7f7);
+      background-size: 300% 300%;
+      animation: gradientAnimation 10s ease infinite;
+    }
+
+    @keyframes gradientAnimation {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    h1 {
+      color: white;
+      font-size: 10px;
+      font-family: "Boldonse", system-ui;
+      font-style: normal;
+      margin-bottom: 40px;
+      text-align: center;
+      letter-spacing: 2px;
+      text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      -webkit-text-stroke: 0.5px rgba(65, 53, 53, 0.5);
+      user-select: none;
+    }
+
+    .pair-code-box {
+      padding: 15px 25px;
+      border-radius: 12px;
+      background: white;
+      color: #333;
+      font-size: 1.2rem;
+      font-weight: bold;
+      box-shadow: 0 5px 15px rgba(255, 255, 255, 0.4);
+      user-select: all;
+      min-width: 220px;
+      text-align: center;
+    }
+
+    .btn {
+      width: 250px;
+      padding: 15px 25px;
+      margin: 20px;
+      background: transparent;
+      border-radius: 25px;
+      border: 2px solid #ffffff;
+      font-size: 18px;
+      font-weight: bold;
+      text-transform: uppercase;
+      color: white;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.4s ease;
+      box-shadow: 0 5px 15px rgba(255, 255, 255, 0.3);
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      height: 200%;
+      width: 200%;
+      background: rgba(255, 255, 255, 0.3);
+      transform: skewX(45deg);
+      transition: all 0.5s;
+    }
+
+    .btn:hover::before {
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+    }
+
+    .btn:hover {
+      background-color: #ffffff;
+      color: #333;
+      box-shadow: 0 10px 25px rgba(255, 255, 255, 0.5);
+      transform: scale(1.05);
+    }
+
+    .btn:active {
+      filter: brightness(0.9);
+      transform: scale(0.98);
+    }
+
+    .input-container {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .phone-input {
+      padding: 12px 20px;
+      border-radius: 25px;
+      border: 2px solid white;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-size: 18px;
+      width: 250px;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+
+    .phone-input::placeholder {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.8rem;
+    }
+
+    .phone-input:focus {
+      outline: none;
+      border-color: rgba(255, 255, 255, 0.8);
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .error-message {
+      color: #ff6b6b;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 10px 20px;
+      border-radius: 25px;
+      margin-top: 10px;
+      font-size: 14px;
+      display: none;
+    }
+
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 2.2rem;
+      }
+      .btn {
+        width: 80%;
+        padding: 12px 20px;
+        font-size: 16px;
+      }
+    }
+
+    @media (min-width: 600px) and (max-width: 1024px) {
+      h1 {
+        font-size: 2.8rem;
+      }
+      .btn {
+        width: 220px;
+        padding: 14px 22px;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      h1 {
+        font-size: 3.5rem;
+      }
+      .btn {
+        width: 250px;
+        padding: 15px 25px;
+      }
+    }
+  </style>
+</head>
+<body>
+    <h1>WhatsApp Pairing</h1>
+  
+    <div class="input-container" id="input-section">
+      <input 
+        type="tel" 
+        class="phone-input" 
+        id="phone-number" 
+        placeholder="Enter your number (with country code)"
+        pattern="[0-9]+"
+      >
+      <button class="btn" onclick="generatePairCode()">Generate Pair Code</button>
+      <div class="error-message" id="error-msg"></div>
+    </div>
+  
+    <div id="pair-code-section" class="hidden">
+      <div id="pair-code" class="pair-code-box">Loading...</div>
+      <button class="btn" onclick="resetForm()">Try Another Number</button>
+    </div>
+  
+    <!-- Update the script section -->
+<script>
+    async function generatePairCode() {
+      const phoneNumber = document.getElementById('phone-number').value.trim();
+      const errorMsg = document.getElementById('error-msg');
+      
+      // Show loading state
+      document.getElementById('pair-code').textContent = 'Generating code...';
+      document.getElementById('input-section').classList.add('hidden');
+      document.getElementById('pair-code-section').classList.remove('hidden');
+      
+      try {
+        const res = await fetch('/pair/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ phoneNumber })
+        });
+  
+        const data = await res.json();
+        
+        if (data.status === 'pair') {
+          document.getElementById('pair-code').textContent = data.pairingCode;
+        } else {
+          errorMsg.textContent = data.error || "Failed to generate pair code";
+          errorMsg.style.display = "block";
+          // Reset view on error
+          resetForm();
+        }
+      } catch (err) {
+        errorMsg.textContent = "Failed to connect to server";
+        errorMsg.style.display = "block";
+        // Reset view on error
+        resetForm();
+      }
+    }
+  
+    function resetForm() {
+      document.getElementById('phone-number').value = '';
+      document.getElementById('error-msg').style.display = 'none';
+      document.getElementById('input-section').classList.remove('hidden');
+      document.getElementById('pair-code-section').classList.add('hidden');
+    }
+  
+    // Handle Enter key
+    document.getElementById('phone-number').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        generatePairCode();
+      }
+    });
+  </script>
+</body>
+</html>

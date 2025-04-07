@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Sutauruki/Satauruki-md.git"
+    "url": "git+https://github.com/Sutauruki/Satauruki_md.git"
   },
   "keywords": [
     "WhatsApp-bot",
@@ -32,9 +32,9 @@
   "author": "Sutauruki",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Sutauruki/Satauruki-md/issues"
+    "url": "https://github.com/Sutauruki/Satauruki_md/issues"
   },
-  "homepage": "https://github.com/Sutauruki/Satauruki-md#readme",
+  "homepage": "https://github.com/Sutauruki/Satauruki_md#readme",
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.16",
     "archiver": "^7.0.1",
@@ -43,6 +43,7 @@
     "express": "^5.1.0",
     "fs-extra": "^11.3.0",
     "megajs": "^1.3.7",
+    "pino": "^9.6.0",
     "qrcode": "^1.5.4"
   }
 }
