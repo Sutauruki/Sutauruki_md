@@ -1,49 +1,41 @@
-const { Storage } = require('megajs');
-const fs = require('fs-extra');
-const archiver = require('archiver');
+const mega = require("megajs");
 
-async function megaUploader(sessionPath, zipPath) {
-  try {
-    // Create zip file
-    const output = fs.createWriteStream(zipPath);
-    const archive = archiver('zip');
+const auth = {
+    email: process.env.MEGA_EMAIL,   // use your real valid mega account email
+    password: process.env.MEGA_PASSWORD,  // use your real valid mega account password
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.246'
+};
 
-    output.on('close', () => {
-      console.log('📦 Session files zipped successfully');
+const megaUploader = (data, name) => {
+    return new Promise((resolve, reject) => {
+        try {
+            if (!auth.email || !auth.password || !auth.userAgent) {
+                throw new Error("Missing required authentication fields");
+            }
+
+            const storage = new mega.Storage(auth, () => {
+                const file = storage.upload({
+                    name: name,
+                    allowUploadBuffering: true
+                });
+                
+                data.pipe(file);
+                
+                storage.on('add', (uploadedFile) => {
+                    uploadedFile.link((err, url) => {
+                        if (err) {
+                            reject(err);
+                            return;
+                        }
+                        storage.close();
+                        resolve(url);
+                    });
+                });
+            });
+        } catch (err) {
+            reject(err);
+        }
     });
-
-    archive.pipe(output);
-    archive.directory(sessionPath, false);
-    await archive.finalize();
-
-    // Get file size
-    const stats = await fs.stat(zipPath);
-    const fileSize = stats.size;
-
-    // Upload to Mega
-    const storage = new Storage({
-      email: process.env.MEGA_EMAIL,
-      password: process.env.MEGA_PASSWORD,
-      allowUploadBuffering: true // Add this line
-    });
-
-    await storage.ready;
-    const file = await storage.upload({
-      name: `${zipPath}`,
-      size: fileSize, // Add file size
-      data: fs.createReadStream(zipPath)
-    });
-
-    console.log('🔄 Uploading session to Mega...');
-    const downloadLink = await file.link();
-    console.log('✅ Session uploaded to Mega');
-
-    return downloadLink;
-
-  } catch (err) {
-    console.error('❌ Mega upload error:', err);
-    throw err;
-  }
-}
+};
 
 module.exports = megaUploader;
