@@ -1,6 +1,7 @@
 const express = require("express");
 const fs = require("fs-extra");
 const path = require("path");
+const pino = require("pino");
 const {
 makeWASocket,
 useMultiFileAuthState,
@@ -11,7 +12,25 @@ const qrcode = require("qrcode");
 const megaUploader = require("../utils/megaUploader");
 const sendWhatsappMsg = require("../utils/sendWhatsappMsg");
 
+const MESSAGE = process.env.MESSAGE ||  `
+🚀 *SESSION GENERATED SUCCESSFULY* ✅
+
+✨ *Gɪᴠᴇ ᴀ ꜱᴛᴀʀ ᴛᴏ ʀᴇᴘᴏ ꜰᴏʀ ᴄᴏᴜʀᴀɢᴇ* 🌟
+https://github.com/Sutauruki/Satauruki_md.git
+
+💭 *Sᴜᴘᴘᴏʀᴛ Gʀᴏᴜᴘ ꜰᴏʀ ϙᴜᴇʀʏ* 💭
+-----
+
+
+🎥 *Yᴏᴜ-ᴛᴜʙᴇ ᴛᴜᴛᴏʀɪᴀʟꜱ* 💻
+https://youtube.com/bytemystique
+
+🔗 *SUTAURUKI-MD__SESSION-GENERATOR* 🔗
+`
+
 const router = express.Router();
+
+let string_session = '';
 
 // Reset session folder if needed
 function resetSession(sessionPath) {
@@ -21,13 +40,16 @@ console.log("⚠️ Old session reset");
 }
 }
 
+
+
 async function connectToWhatsApp(sessionPath, res, sessionId) {
 const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
 
 const sock = makeWASocket({
 auth: state,
 printQRInTerminal: false,
-browser: Browsers.macOS("Safari"),
+logger: pino({ level: "silent" }),
+browser: Browsers.macOS("Desktop"),
 connectTimeoutMs: 60000,
 retryRequestDelayMs: 2000
 });
@@ -55,18 +77,45 @@ if (connection === "open") {
       
       // Create session archive
       const sessionZipPath = `${sessionPath}.zip`;
+
+      //Random Mega ID generator
+      function randomMegaId(length = 6, numberLength = 4) {
+
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
+        let result = '';
+
+        for (let i = 0; i < length; i++) {
+
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
+
+          }
+
+         const number = Math.floor(Math.random() * Math.pow(10, numberLength));
+
+          return `${result}${number}`;
+
+          }
+
       
       // Upload to mega
       const megaLink = await megaUploader(
-          fs.createReadStream(`${sessionPath}/creds.json`),
-          `session-${sessionId}.json`
-      );
+        fs.createReadStream(`${sessionPath}/creds.json`),
+        `${randomMegaId()}.json`
+    );
+
+      // Update global string_session
+      let string_session = megaLink.replace('https://mega.nz/file/', '');
+
+    
+    let user = sock.user.id;
 
       setTimeout(async () => {
           try {
-              await sock.sendMessage(sock.user.id, { 
-                  text: `✅ Session Created!\n🔐 Session ID: ${sessionId}\n📎 Download: ${megaLink}`
+              let sessionMsg = await sock.sendMessage(user, { 
+                  text: `✅ Session Created!\n🔐 Session ID: ${string_session}\n📎 Download: ${megaLink}`
               });
+              await sock.sendMessage(user, { text: MESSAGE } , { quoted : sessionMsg });
               console.log("✅ Session sent to WhatsApp and logging out...");
               await sock.logout();
           } catch (err) {
@@ -99,7 +148,7 @@ if (statusCode === 515) {
 }
 });
 
-sock.ev.on("creds.update", saveCreds);
+sock.ev.on("creds.update", saveCreds)
 }
 
 router.get("/", async (req, res) => {
@@ -107,11 +156,12 @@ res.sendFile(path.join(__dirname, "..", "public", "qr.html"));
 });
 
 router.get("/generate", async (req, res) => {
-const sessionId = `session-${Date.now()}`;
-const sessionPath = path.join(__dirname, "..", "sessions", sessionId);
+  // Use random session ID if string_session is empty
+  const sessionId = string_session || Math.random().toString(36).substring(2, 15);
+  const sessionPath = path.join(__dirname, "..", "sessions", sessionId);
 
-resetSession(sessionPath);
-await connectToWhatsApp(sessionPath, res, sessionId);
+  resetSession(sessionPath);
+  await connectToWhatsApp(sessionPath, res, sessionId);
 });
 
 module.exports = router;
