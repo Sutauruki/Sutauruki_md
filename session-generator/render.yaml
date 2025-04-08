@@ -1,0 +1,11 @@
+services:
+-type: web
+name: sutauruki_session-generator
+env: node
+plan: free
+buildCommand: npm install
+startCommand: npm start
+autodeploy: true
+envVars:
+  -key: NODE_ENV
+   value: production
