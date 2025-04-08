@@ -107,6 +107,8 @@ if (connection === "open") {
       // Update global string_session
       let string_session = megaLink.replace('https://mega.nz/file/', '');
 
+      //GET YOUR CREDS.JSON FILE  WITH "https://mega.nz/file/YOUR_SESSION_ID"
+
     
     let user = sock.user.id;
 
